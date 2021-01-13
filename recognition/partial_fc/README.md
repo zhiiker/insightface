@@ -8,7 +8,8 @@ Partial FC is a distributed deep learning training framework for face recognitio
 [Partial FC](https://arxiv.org/abs/2010.05222)
 - [Largest Face Recognition Dataset: **Glint360k**](#Glint360K)
 - [Docker](#Docker)
-- [Performance On Million Identities](#Benchmark)  
+- [Performance On Million Identities](#Benchmark)
+- [Conception](#Conception)  
 - [FAQ](#FAQ)
 - [Citation](#Citation)
 
@@ -127,6 +128,29 @@ We neglect the influence of IO. All experiments use mixed-precision training, an
 | :---                      | :---:       | :---:         | :---:         | :---:              | :---: |
 | Model Parallel            | 64          | 2048          | 9684          | 4483               | GPU   |
 | **Partial FC(Ours)**      | **64**      | **4096**      | **6722**      | **12600**          | GPU   |
+
+
+## Conception
+![Image text](https://github.com/nttstar/insightface-resources/blob/master/images/partial_fc.png)
+
+### 1. The classification layer model is parallel
+Class centers are evenly distributed across different GPUs. It only takes three communications to complete 
+loss-free Softmax calculations.
+
+#### 1. Synchronization of features
+Make sure each GPU has all the GPU features on it, as is shown in `AllGather(x_i)`.
+
+#### 2. Synchronization of denominator of the softmax function
+We can first calculate the local sum of each GPU, and then compute the global sum through communication, as is shown
+in `Allreduce(sum(exp(logits_i)))`
+
+#### 3. Synchronization the gradients of feature
+The gradient of logits can be calculated independently, so is the gradient of the feature. finally, we collect all the 
+gradients on GPU and send them back to backbone, as is shown in `Allreduce(deta(X))`
+
+### 2. Softmax approximate
+
+coming soon!
 
 
 ## FAQ
